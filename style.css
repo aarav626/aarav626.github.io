@@ -1,0 +1,73 @@
+/* Background wall effect */
+body {
+  margin: 0;
+  padding: 0;
+  background: #111 url("https://i.imgur.com/lbbQJvp.jpeg") center/cover no-repeat;
+  font-family: 'Arial Black', sans-serif;
+  color: white;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wall {
+  text-align: center;
+  position: relative;
+}
+
+/* Graffiti text styling */
+.graffiti {
+  font-size: 4rem;
+  color: #ff00ff;
+  text-shadow: 3px 3px 10px cyan, -3px -3px 10px yellow;
+  animation: pulse 2s infinite alternate;
+}
+
+/* Spray tags */
+.spray {
+  font-size: 1.5rem;
+  margin: 10px;
+  color: lime;
+  filter: drop-shadow(0 0 5px red);
+  transform: rotate(-5deg);
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.spray:hover {
+  transform: rotate(5deg) scale(1.1);
+  color: orange;
+}
+
+/* Neon tag */
+.tag {
+  font-size: 2rem;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff, 0 0 20px blue;
+  margin-bottom: 20px;
+}
+
+/* Blob animation */
+.blob {
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 0, 150, 0.6);
+  position: absolute;
+  bottom: -50px;
+  left: calc(50% - 75px);
+  border-radius: 50%;
+  filter: blur(40px);
+  animation: blobMove 6s infinite ease-in-out;
+}
+
+/* Animations */
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.1) rotate(-2deg); }
+}
+
+@keyframes blobMove {
+  0%   { transform: translateY(0) scale(1); }
+  50%  { transform: translateY(-30px) scale(1.2); }
+  100% { transform: translateY(0) scale(1); }
+}
