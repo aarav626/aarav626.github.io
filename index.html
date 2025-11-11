@@ -1,18 +1,43 @@
 <!DOCTYPE html>
+<!-- This single-page web app helps users find the most comfortable time to run using live weather data -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CSS Graffiti Wall</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Best Time to Run</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="wall">
-    <h1 class="graffiti">CSE 2004</h1>
-    <p class="tag">CSS Graffiti Wall</p>
-    <p class="spray">🚀 Creativity Unleashed</p>
-    <p class="spray">🔥 Flex & Flow</p>
-    <p class="spray">🎨 Animations Rock</p>
-    <div class="blob"></div>
+  <!-- Page title and short description -->
+  <h1>🏃‍♀️ Best Time to Run</h1>
+  <p>Find the most comfortable hours for a run today.</p>
+
+  <!-- Search box with input field and button -->
+  <div class="search-box">
+    <input id="city" placeholder="Enter city name">
+    <button id="search">Search</button>
   </div>
+
+  <!-- Displays status messages like errors or loading -->
+  <div id="status"></div>
+
+  <!-- Hidden result section that shows after fetching data -->
+  <div id="result" hidden>
+    <h2 id="place"></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Temp (°F)</th>
+          <th>Wind (mph)</th>
+          <th>Rain (mm)</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
