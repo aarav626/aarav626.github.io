@@ -108,7 +108,6 @@ async function fetchHistoricalVolatility(symbol) {
   }
 }
 
-
 // GLOBAL PAGE NAV
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -121,68 +120,42 @@ function showPage(id) {
   scrollToTop();
 }
 
-
 /* ============================================================
-   STOCK BADGE UI (inside charts area)
+   STOCK BADGE UI (inside portfolio page)
    ============================================================ */
-
-/**
- * Creates (if needed) the badge that displays:
- * - Price
- * - Daily % Change
- * - Annual Volatility
- * - Annual Expected Return
- */
 function ensureStockBadge() {
-  let badge = document.getElementById("stock-badge");
-  if (!badge) {
-    badge = document.createElement("div");
-    badge.id = "stock-badge";
-    badge.style.display = "flex";
-    badge.style.gap = "1rem";
-    badge.style.padding = "10px 14px";
-    badge.style.marginBottom = "12px";
-    badge.style.borderRadius = "10px";
-    badge.style.background = "rgba(0,0,0,0.35)";
-    badge.style.backdropFilter = "blur(6px)";
-    badge.style.color = "white";
-    badge.style.fontSize = "0.85rem";
-    badge.style.alignItems = "center";
-    badge.style.fontWeight = "500";
-
-    const chartsContainer = document.getElementById("allocation-card");
-    if (chartsContainer && chartsContainer.parentElement) {
-      chartsContainer.parentElement.insertBefore(badge, chartsContainer);
-    }
+  let badge = document.getElementById("live-stock-badge");
+  if (badge) {
+    badge.classList.remove("hidden");
+    return badge;
   }
-  return badge;
+  return null;
 }
 
-/**
- * Renders updated live stock data inside the badge
- */
 function renderStockBadge(symbol, quote, stats) {
   const badge = ensureStockBadge();
   if (!badge) return;
 
-  const price = quote?.price ?? null;
-  const chg = quote?.change ?? null;
+  const price = quote?.price ?? 0;
+  const chg = quote?.change ?? 0;
+  const vol = stats?.annualVol ?? 0;
+  const er = stats?.annualReturn ?? 0;
 
-  const vol = stats?.annualVol ?? null;
-  const er = stats?.annualReturn ?? null;
+  const badgeSymbol = document.getElementById("badge-symbol");
+  const badgePrice = document.getElementById("badge-price");
+  const badgeChange = document.getElementById("badge-change");
+  const badgeVol = document.getElementById("badge-vol");
+  const badgeRet = document.getElementById("badge-ret");
 
-  const color = chg >= 0 ? "var(--success)" : "var(--danger)";
-  const chgText = chg != null ? `${chg.toFixed(2)}%` : "–";
-
-  badge.innerHTML = `
-    <span style="font-size:0.9rem; opacity:0.9;">${symbol}</span>
-    <span>Price: <strong>$${price ? price.toFixed(2) : "–"}</strong></span>
-    <span style="color:${color};">Change: ${chgText}</span>
-    <span>Vol: ${(vol * 100).toFixed(1)}%</span>
-    <span>Exp Ret: ${(er * 100).toFixed(1)}%</span>
-  `;
+  if (badgeSymbol) badgeSymbol.textContent = symbol;
+  if (badgePrice) badgePrice.textContent = `$${price.toFixed(2)}`;
+  if (badgeChange) {
+    badgeChange.textContent = `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`;
+    badgeChange.className = `badge-change ${chg >= 0 ? 'positive' : 'negative'}`;
+  }
+  if (badgeVol) badgeVol.textContent = `${(vol * 100).toFixed(1)}%`;
+  if (badgeRet) badgeRet.textContent = `${(er * 100).toFixed(1)}%`;
 }
-
 
 // NAVBAR & HERO 3D EFFECT
 window.addEventListener("scroll", () => {
@@ -380,7 +353,6 @@ function updateAllocationDisplays() {
 /* ============================================================
    LIVE PORTFOLIO METRICS (REAL STOCK DATA)
    ============================================================ */
-
 async function calculatePortfolioMetrics() {
   const stockSelect = document.getElementById("stock-select");
   const cryptoSelect = document.getElementById("crypto-select");
@@ -476,25 +448,9 @@ async function calculatePortfolioMetrics() {
   return { expReturn, sigma };
 }
 
-
-  const sigma = Math.sqrt(variance);
-  const rf = 2.5;
-  const sharpe = sigma > 0 ? (exp - rf) / sigma : 0;
-
-  const expEl = document.getElementById("expected-return");
-  const volEl = document.getElementById("volatility");
-  const shEl = document.getElementById("sharpe-ratio");
-  if (expEl) expEl.textContent = exp.toFixed(1) + "%";
-  if (volEl) volEl.textContent = sigma.toFixed(1) + "%";
-  if (shEl) shEl.textContent = sharpe.toFixed(2);
-
-  const heroVal = document.getElementById("hero-equity");
-  if (heroVal && !isNaN(exp)) {
-    const factor = 1 + exp / 100;
-    heroVal.textContent = "$" + (10000 * Math.pow(factor, 10)).toFixed(0);
-  }
-}
-
+/* ============================================================
+   BUILD PORTFOLIO CHARTS
+   ============================================================ */
 function buildPortfolioCharts() {
   const labels = ["Equities", "REITs", "Bonds", "Crypto"];
   const assetKeys = ["stocks", "reits", "bonds", "crypto"];
@@ -521,171 +477,6 @@ function buildPortfolioCharts() {
           display: true,
           text: "Current Allocation (%)",
           color: "#e8f5e9",
-        },
-      },
-    },
-  });
-
-  /* ============================================================
-   MONTE CARLO USING REAL VOLATILITY + REAL EXPECTED RETURN
-   ============================================================ */
-
-function runMonteCarlo(realExpReturn, realVolatility) {
-  const mcCtx = document.getElementById("monte-carlo-chart");
-  if (!mcCtx) return;
-
-  const nYears = 10;
-  const expR = realExpReturn / 100;
-  const sigma = realVolatility / 100;
-
-  const paths = [];
-
-  for (let p = 0; p < 30; p++) {
-    let value = 10000;
-    const path = [value];
-
-    for (let t = 1; t <= nYears; t++) {
-      const shock = sigma * (Math.random() * 2 - 1);
-      value *= 1 + expR + shock;
-      path.push(value);
-    }
-
-    paths.push(path);
-  }
-
-  monteCarloChart = ensureChart(mcCtx, "line", {
-    data: {
-      labels: [...Array(nYears + 1).keys()].map(y => y + "y"),
-      datasets: paths.map(path => ({
-        data: path,
-        tension: 0.25,
-        borderWidth: 1,
-        pointRadius: 0,
-      })),
-    },
-    options: {
-      plugins: {
-        legend: { display: false },
-        title: {
-          display: true,
-          text: "Monte Carlo (Real Market Volatility)",
-          color: "#e8f5e9",
-        },
-      },
-      scales: {
-        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
-        y: {
-          ticks: { color: "#b7c9c3" },
-          grid: { color: "#122018" },
-          beginAtZero: false,
-        },
-      },
-    },
-  });
-}
-
-  /* ============================================================
-   REAL EXPECTED RETURN → GROWTH CHART
-   ============================================================ */
-
-function buildRealGrowthChart(realExpReturn) {
-  const growthCtx = document.getElementById("growth-chart");
-  if (!growthCtx) return;
-
-  const years = [...Array(11).keys()];
-  const initial = 10000;
-  const r = realExpReturn / 100;
-
-  const series = years.map(y => initial * Math.pow(1 + r, y));
-
-  growthChart = ensureChart(growthCtx, "line", {
-    data: {
-      labels: years.map(y => y + "y"),
-      datasets: [
-        {
-          label: "Projected Value",
-          data: series,
-          tension: 0.25,
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        legend: { labels: { color: "#e8f5e9" } },
-        title: {
-          display: true,
-          text: "Deterministic Growth (Real Expected Return)",
-          color: "#e8f5e9",
-        },
-      },
-      scales: {
-        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
-        y: {
-          ticks: { color: "#b7c9c3" },
-          grid: { color: "#122018" },
-          beginAtZero: false,
-        },
-      },
-    },
-  });
-}
-
-  async function handleSimulationRun() {
-  simulationRun = true;
-
-  const { expReturn, sigma } = await calculatePortfolioMetrics();
-
-  // REAL DATA INTEGRATION
-  buildRealGrowthChart(expReturn);
-  runMonteCarlo(expReturn, sigma);
-
-  buildPortfolioCharts(); // keeps allocation, correlation, volatility, scatter updated
-  updateChartVisibilityFromChecks();
-
-  const simStatus = document.getElementById("sim-status");
-  if (simStatus) {
-    simStatus.textContent = "Simulation updated with real market data.";
-    simStatus.classList.add("active");
-  }
-}
-
-
-  // Growth
-  const growthCtx = document.getElementById("growth-chart");
-  const expVal = parseFloat(
-    (document.getElementById("expected-return") || { textContent: "8.2%" })
-      .textContent
-  );
-  const years = [...Array(11).keys()];
-  const initial = 10000;
-  const series = years.map((y) => initial * Math.pow(1 + expVal / 100, y));
-
-  growthChart = ensureChart(growthCtx, "line", {
-    data: {
-      labels: years.map((y) => y + "y"),
-      datasets: [
-        {
-          label: "Projected value",
-          data: series,
-          tension: 0.25,
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        legend: { labels: { color: "#e8f5e9" } },
-        title: {
-          display: true,
-          text: "Deterministic growth using expected return",
-          color: "#e8f5e9",
-        },
-      },
-      scales: {
-        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
-        y: {
-          ticks: { color: "#b7c9c3" },
-          grid: { color: "#122018" },
-          beginAtZero: false,
         },
       },
     },
@@ -793,42 +584,38 @@ function buildRealGrowthChart(realExpReturn) {
       },
     },
   });
+}
 
-  // Monte-Carlo fan (simplified)
-  const mcCtx = document.getElementById("monte-carlo-chart");
-  const nYears = 10;
-  const expR = expVal / 100;
-  const sigma = parseFloat(
-    (document.getElementById("volatility") || { textContent: "12.5%" }).textContent
-  ) / 100;
-  const paths = [];
-  for (let p = 0; p < 30; p++) {
-    let value = 10000;
-    const path = [value];
-    for (let t = 1; t <= nYears; t++) {
-      const shock = sigma * 0.6 * (Math.random() * 2 - 1);
-      value *= 1 + expR + shock;
-      path.push(value);
-    }
-    paths.push(path);
-  }
+/* ============================================================
+   REAL EXPECTED RETURN → GROWTH CHART
+   ============================================================ */
+function buildRealGrowthChart(realExpReturn) {
+  const growthCtx = document.getElementById("growth-chart");
+  if (!growthCtx) return;
 
-  monteCarloChart = ensureChart(mcCtx, "line", {
+  const years = [...Array(11).keys()];
+  const initial = 10000;
+  const r = realExpReturn / 100;
+
+  const series = years.map(y => initial * Math.pow(1 + r, y));
+
+  growthChart = ensureChart(growthCtx, "line", {
     data: {
-      labels: [...Array(nYears + 1).keys()].map((y) => y + "y"),
-      datasets: paths.map((path) => ({
-        data: path,
-        tension: 0.25,
-        borderWidth: 1,
-        pointRadius: 0,
-      })),
+      labels: years.map(y => y + "y"),
+      datasets: [
+        {
+          label: "Projected Value",
+          data: series,
+          tension: 0.25,
+        },
+      ],
     },
     options: {
       plugins: {
-        legend: { display: false },
+        legend: { labels: { color: "#e8f5e9" } },
         title: {
           display: true,
-          text: "Sample Monte-Carlo Paths",
+          text: "Deterministic Growth (Real Expected Return)",
           color: "#e8f5e9",
         },
       },
@@ -844,9 +631,87 @@ function buildRealGrowthChart(realExpReturn) {
   });
 }
 
+/* ============================================================
+   MONTE CARLO USING REAL VOLATILITY + REAL EXPECTED RETURN
+   ============================================================ */
+function runMonteCarlo(realExpReturn, realVolatility) {
+  const mcCtx = document.getElementById("monte-carlo-chart");
+  if (!mcCtx) return;
+
+  const nYears = 10;
+  const expR = realExpReturn / 100;
+  const sigma = realVolatility / 100;
+
+  const paths = [];
+
+  for (let p = 0; p < 30; p++) {
+    let value = 10000;
+    const path = [value];
+
+    for (let t = 1; t <= nYears; t++) {
+      const shock = sigma * (Math.random() * 2 - 1);
+      value *= 1 + expR + shock;
+      path.push(value);
+    }
+
+    paths.push(path);
+  }
+
+  monteCarloChart = ensureChart(mcCtx, "line", {
+    data: {
+      labels: [...Array(nYears + 1).keys()].map(y => y + "y"),
+      datasets: paths.map(path => ({
+        data: path,
+        tension: 0.25,
+        borderWidth: 1,
+        pointRadius: 0,
+      })),
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: "Monte Carlo (Real Market Volatility)",
+          color: "#e8f5e9",
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
+        y: {
+          ticks: { color: "#b7c9c3" },
+          grid: { color: "#122018" },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+}
+
+/* ============================================================
+   HANDLE SIMULATION RUN
+   ============================================================ */
+async function handleSimulationRun() {
+  simulationRun = true;
+
+  const { expReturn, sigma } = await calculatePortfolioMetrics();
+
+  // REAL DATA INTEGRATION
+  buildRealGrowthChart(expReturn);
+  runMonteCarlo(expReturn, sigma);
+
+  buildPortfolioCharts(); // keeps allocation, correlation, volatility, scatter updated
+  updateChartVisibilityFromChecks();
+
+  const simStatus = document.getElementById("sim-status");
+  if (simStatus) {
+    simStatus.textContent = "Simulation updated with real market data.";
+    simStatus.classList.add("active");
+  }
+}
+
 // RUN SIM + VISIBILITY
 let simulationRun = false;
-const chartCards = {};
 
 function updateChartVisibilityFromChecks() {
   const mapping = [
@@ -923,7 +788,7 @@ function recomputeStrategy() {
       `<strong>${riskLabelForScore(risk).toLowerCase()}</strong> risk tolerance, ` +
       `a <strong>$${initial.toLocaleString()}</strong> lump sum and ` +
       `<strong>$${monthly.toLocaleString()}/month</strong> contributions, ` +
-      `you’re effectively targeting around <strong>${baseReturn.toFixed(
+      `you're effectively targeting around <strong>${baseReturn.toFixed(
         1
       )}% annualised</strong>. ` +
       `Most of the growth comes from time in the market plus disciplined contributions – the curve is what this chart shows.`;
@@ -1073,7 +938,7 @@ async function buildCryptoTicker() {
       const change = c.price_change_percentage_24h;
       item.innerHTML = `
         <span class="ticker-symbol">${c.symbol.toUpperCase()}</span>
-        <span class="ticker-price">$${c.current_price.toLocaleString()}</span>
+        <span class="ticker-price">${c.current_price.toLocaleString()}</span>
         <span style="color:${change >= 0 ? "var(--success)" : "var(--danger)"}">
           ${(change >= 0 ? "+" : "") + change.toFixed(2)}%
         </span>
@@ -1088,7 +953,6 @@ async function buildCryptoTicker() {
 }
 
 // NEWS (NewsAPI + fallback)
-
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80",
   "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&w=800&q=80",
@@ -1099,7 +963,6 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1556742031-c6961e8560b0?auto=format&fit=crop&w=800&q=80"
 ];
 
-// Returns a random fallback image
 function getRandomFallbackImage() {
   return FALLBACK_IMAGES[Math.floor(Math.random() * FALLBACK_IMAGES.length)];
 }
@@ -1108,14 +971,14 @@ async function buildNewsFeed() {
   const container = document.getElementById("news-feed");
   if (!container) return;
 
-  const NEWS_API_KEY = "6fac2527aad64481bf4934d1ba1bfbf2"; // <-- Put your NewsAPI key here (e.g. "abcd1234...")
+  const NEWS_API_KEY = "6fac2527aad64481bf4934d1ba1bfbf2";
 
   let articles = [];
 
   if (NEWS_API_KEY) {
     try {
       const url =
-        "https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=6&apiKey=" +
+        "https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=6&apikey=" +
         NEWS_API_KEY;
       const res = await fetch(url);
       if (!res.ok) throw new Error("News HTTP " + res.status);
@@ -1160,8 +1023,6 @@ async function buildNewsFeed() {
   }
 
   container.innerHTML = "";
-  const placeholder =
-    "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=800&q=80";
 
   articles.forEach((a) => {
     const card = document.createElement("article");
@@ -1170,9 +1031,8 @@ async function buildNewsFeed() {
     const img = document.createElement("img");
     img.className = "news-image";
     img.src = a.urlToImage && !a.urlToImage.includes("example")
-  ? a.urlToImage
-  : getRandomFallbackImage();
-
+      ? a.urlToImage
+      : getRandomFallbackImage();
     img.alt = a.title || "Market news";
 
     const body = document.createElement("div");
@@ -1209,7 +1069,7 @@ function populateStockSelect() {
   STOCK_LIST.forEach((stock) => {
     const option = document.createElement("option");
     option.value = stock.symbol;
-    option.textContent = `${stock.symbol} — ${stock.name}`;
+    option.textContent = `${stock.symbol} – ${stock.name}`;
     select.appendChild(option);
   });
 
@@ -1231,7 +1091,7 @@ async function populateCryptoSelect() {
     list.forEach((coin) => {
       const opt = document.createElement("option");
       opt.value = coin.id;
-      opt.textContent = `${coin.symbol.toUpperCase()} — ${coin.name}`;
+      opt.textContent = `${coin.symbol.toUpperCase()} – ${coin.name}`;
       select.appendChild(opt);
     });
 
@@ -1245,75 +1105,8 @@ async function populateCryptoSelect() {
   }
 }
 
-// INIT
-document.addEventListener("DOMContentLoaded", () => {
-  initThreeBackground();
-
-  // Sliders
-  const sliderIds = ["stocks", "reits", "bonds", "crypto"];
-  sliderIds.forEach((k) => {
-    const slider = document.getElementById(`${k}-slider`);
-    if (!slider) return;
-    slider.addEventListener("input", () => {
-      allocations[k] = parseInt(slider.value, 10);
-      updateAllocationDisplays();
-    });
-  });
-
-  populateStockSelect();
-  populateCryptoSelect();
-
-  // Recalculate when selections change
-  const stockSelect = document.getElementById("stock-select");
-  const cryptoSelect = document.getElementById("crypto-select");
-  if (stockSelect) stockSelect.addEventListener("change", calculatePortfolioMetrics);
-  if (cryptoSelect) cryptoSelect.addEventListener("change", calculatePortfolioMetrics);
-
-  // Run Simulation button
-  const simStatus = document.getElementById("sim-status");
-  const runSimBtn = document.getElementById("run-sim-btn");
-  if (runSimBtn) {
-    runSimBtn.addEventListener("click", async () => {
-    await handleSimulationRun();
-});
-
-  }
-
-  document
-    .querySelectorAll(".graph-checkboxes input")
-    .forEach((chk) => chk.addEventListener("change", updateChartVisibilityFromChecks));
-
-  updateChartVisibilityFromChecks();
-  updateAllocationDisplays();
-
-  // Strategy
-  const strategySliders = [
-    "horizon-slider",
-    "risk-slider",
-    "initial-slider",
-    "monthly-slider",
-  ];
-  strategySliders.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("input", recomputeStrategy);
-  });
-  recomputeStrategy();
-
-  // Market & news
-  buildMarketStats();
-  buildCryptoTicker();
-  buildNewsFeed();
-
-  // Periodic refresh for market data
-  setInterval(buildMarketStats, 60000);
-  setInterval(buildCryptoTicker, 60000);
-});
-
-// ------------------
 // INTERACTIVE QUIZ
-// ------------------
-
-document.addEventListener("DOMContentLoaded", () => {
+function initQuiz() {
   const submitBtn = document.getElementById("quiz-submit");
   if (!submitBtn) return;
 
@@ -1347,26 +1140,86 @@ document.addEventListener("DOMContentLoaded", () => {
       explanation =
         "You prefer stability and capital preservation. A portfolio with higher allocations " +
         "to bonds, blue-chip equities, and minimal high-volatility assets would suit you well.";
-    } 
-    else if (score <= 11) {
+    } else if (score <= 11) {
       profile = "Moderate Investor";
       explanation =
         "You balance growth with stability. A diversified mix of equities, REITs, and bonds is ideal. " +
         "Moderate crypto exposure can enhance long-term upside.";
-    } 
-    else {
+    } else {
       profile = "Aggressive Investor";
       explanation =
-        "You’re comfortable with volatility and think long-term. A portfolio tilted heavily toward " +
-        "equities and growth assets — with some crypto optionality — aligns with your profile.";
+        "You're comfortable with volatility and think long-term. A portfolio tilted heavily toward " +
+        "equities and growth assets – with some crypto optionality – aligns with your profile.";
     }
 
     resultTitle.textContent = profile;
     resultText.textContent = explanation;
 
     resultBox.style.display = "block";
-
   });
+}
+
+// INIT
+document.addEventListener("DOMContentLoaded", () => {
+  initThreeBackground();
+
+  // Sliders
+  const sliderIds = ["stocks", "reits", "bonds", "crypto"];
+  sliderIds.forEach((k) => {
+    const slider = document.getElementById(`${k}-slider`);
+    if (!slider) return;
+    slider.addEventListener("input", () => {
+      allocations[k] = parseInt(slider.value, 10);
+      updateAllocationDisplays();
+    });
+  });
+
+  populateStockSelect();
+  populateCryptoSelect();
+
+  // Recalculate when selections change
+  const stockSelect = document.getElementById("stock-select");
+  const cryptoSelect = document.getElementById("crypto-select");
+  if (stockSelect) stockSelect.addEventListener("change", calculatePortfolioMetrics);
+  if (cryptoSelect) cryptoSelect.addEventListener("change", calculatePortfolioMetrics);
+
+  // Run Simulation button
+  const runSimBtn = document.getElementById("run-sim-btn");
+  if (runSimBtn) {
+    runSimBtn.addEventListener("click", async () => {
+      await handleSimulationRun();
+    });
+  }
+
+  document
+    .querySelectorAll(".graph-checkboxes input")
+    .forEach((chk) => chk.addEventListener("change", updateChartVisibilityFromChecks));
+
+  updateChartVisibilityFromChecks();
+  updateAllocationDisplays();
+
+  // Strategy
+  const strategySliders = [
+    "horizon-slider",
+    "risk-slider",
+    "initial-slider",
+    "monthly-slider",
+  ];
+  strategySliders.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("input", recomputeStrategy);
+  });
+  recomputeStrategy();
+
+  // Market & news
+  buildMarketStats();
+  buildCryptoTicker();
+  buildNewsFeed();
+
+  // Initialize quiz
+  initQuiz();
+
+  // Periodic refresh for market data
+  setInterval(buildMarketStats, 60000);
+  setInterval(buildCryptoTicker, 60000);
 });
-
-
