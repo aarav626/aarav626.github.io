@@ -1,3 +1,114 @@
+/* ============================================================
+   ALPHA VANTAGE LIVE STOCK ENGINE
+   ============================================================ */
+
+const ALPHA_KEY = "585JL6W27JVEWZ8M";
+const ALPHA_BASE = "https://www.alphavantage.co/query";
+
+/* ------------------------------------------------------------
+    Local cache to prevent hitting API limits (5 req / min)
+------------------------------------------------------------ */
+const stockCache = {
+  quote: {},
+  history: {},
+  timestamp: {}
+};
+
+/* ------------------------------------------------------------
+   Fetch real-time stock quote (price + daily change)
+   Endpoint: GLOBAL_QUOTE
+------------------------------------------------------------ */
+async function fetchStockQuote(symbol) {
+  const now = Date.now();
+
+  // Cache valid for 60 seconds
+  if (stockCache.quote[symbol] && now - stockCache.timestamp[symbol] < 60000) {
+    return stockCache.quote[symbol];
+  }
+
+  try {
+    const url = `${ALPHA_BASE}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data["Global Quote"]) {
+      throw new Error("Invalid Alpha Vantage quote payload");
+    }
+
+    const quote = {
+      price: parseFloat(data["Global Quote"]["05. price"]),
+      change: parseFloat(data["Global Quote"]["10. change percent"]),
+      rawChange: parseFloat(data["Global Quote"]["09. change"]),
+    };
+
+    stockCache.quote[symbol] = quote;
+    stockCache.timestamp[symbol] = now;
+
+    return quote;
+  } catch (err) {
+    console.warn("Stock quote error:", err);
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------
+   Fetch 100 days of historical data
+   Computes:
+     - daily log returns
+     - expected daily return
+     - expected annual return
+     - annualized volatility
+------------------------------------------------------------ */
+async function fetchHistoricalVolatility(symbol) {
+  const now = Date.now();
+
+  // Cache valid for 10 minutes
+  if (stockCache.history[symbol] && now - stockCache.timestamp[symbol] < 600000) {
+    return stockCache.history[symbol];
+  }
+
+  try {
+    const url = `${ALPHA_BASE}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&apikey=${ALPHA_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const series = data["Time Series (Daily)"];
+    if (!series) throw new Error("Invalid Alpha history payload");
+
+    const dates = Object.keys(series).sort();
+    const closes = dates.map(d => parseFloat(series[d]["5. adjusted close"]));
+
+    const logReturns = [];
+    for (let i = 1; i < closes.length; i++) {
+      logReturns.push(Math.log(closes[i] / closes[i - 1]));
+    }
+
+    const n = logReturns.length;
+    const mean = logReturns.reduce((a, b) => a + b, 0) / n;
+    const variance = logReturns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+
+    const dailyVol = Math.sqrt(variance);
+    const annualVol = dailyVol * Math.sqrt(252);
+    const annualReturn = Math.pow(1 + mean, 252) - 1;
+
+    const stats = {
+      annualVol,
+      annualReturn,
+      dailyVol,
+      meanDailyReturn: mean
+    };
+
+    stockCache.history[symbol] = stats;
+    stockCache.timestamp[symbol] = now;
+
+    return stats;
+  } catch (err) {
+    console.warn("Volatility fetch error:", err);
+    return { annualVol: 0.20, annualReturn: 0.08 }; // safe fallback
+  }
+}
+
+
 // GLOBAL PAGE NAV
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -9,6 +120,69 @@ function showPage(id) {
   if (target) target.classList.add("active");
   scrollToTop();
 }
+
+
+/* ============================================================
+   STOCK BADGE UI (inside charts area)
+   ============================================================ */
+
+/**
+ * Creates (if needed) the badge that displays:
+ * - Price
+ * - Daily % Change
+ * - Annual Volatility
+ * - Annual Expected Return
+ */
+function ensureStockBadge() {
+  let badge = document.getElementById("stock-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "stock-badge";
+    badge.style.display = "flex";
+    badge.style.gap = "1rem";
+    badge.style.padding = "10px 14px";
+    badge.style.marginBottom = "12px";
+    badge.style.borderRadius = "10px";
+    badge.style.background = "rgba(0,0,0,0.35)";
+    badge.style.backdropFilter = "blur(6px)";
+    badge.style.color = "white";
+    badge.style.fontSize = "0.85rem";
+    badge.style.alignItems = "center";
+    badge.style.fontWeight = "500";
+
+    const chartsContainer = document.getElementById("allocation-card");
+    if (chartsContainer && chartsContainer.parentElement) {
+      chartsContainer.parentElement.insertBefore(badge, chartsContainer);
+    }
+  }
+  return badge;
+}
+
+/**
+ * Renders updated live stock data inside the badge
+ */
+function renderStockBadge(symbol, quote, stats) {
+  const badge = ensureStockBadge();
+  if (!badge) return;
+
+  const price = quote?.price ?? null;
+  const chg = quote?.change ?? null;
+
+  const vol = stats?.annualVol ?? null;
+  const er = stats?.annualReturn ?? null;
+
+  const color = chg >= 0 ? "var(--success)" : "var(--danger)";
+  const chgText = chg != null ? `${chg.toFixed(2)}%` : "–";
+
+  badge.innerHTML = `
+    <span style="font-size:0.9rem; opacity:0.9;">${symbol}</span>
+    <span>Price: <strong>$${price ? price.toFixed(2) : "–"}</strong></span>
+    <span style="color:${color};">Change: ${chgText}</span>
+    <span>Vol: ${(vol * 100).toFixed(1)}%</span>
+    <span>Exp Ret: ${(er * 100).toFixed(1)}%</span>
+  `;
+}
+
 
 // NAVBAR & HERO 3D EFFECT
 window.addEventListener("scroll", () => {
@@ -203,37 +377,105 @@ function updateAllocationDisplays() {
   calculatePortfolioMetrics();
 }
 
-function calculatePortfolioMetrics() {
-  let exp = 0;
-  let variance = 0;
+/* ============================================================
+   LIVE PORTFOLIO METRICS (REAL STOCK DATA)
+   ============================================================ */
 
+async function calculatePortfolioMetrics() {
   const stockSelect = document.getElementById("stock-select");
   const cryptoSelect = document.getElementById("crypto-select");
-  const stockSelections = stockSelect
-    ? Array.from(stockSelect.selectedOptions)
-    : [];
-  const cryptoSelections = cryptoSelect
-    ? Array.from(cryptoSelect.selectedOptions)
+
+  const selectedStocks = stockSelect
+    ? Array.from(stockSelect.selectedOptions).map(o => o.value)
     : [];
 
-  Object.keys(allocations).forEach((asset) => {
-    const w = allocations[asset] / 100;
-    let selections = [];
+  const selectedCryptos = cryptoSelect
+    ? Array.from(cryptoSelect.selectedOptions).map(o => o.value)
+    : [];
 
-    if (asset === "stocks") selections = stockSelections;
-    if (asset === "crypto") selections = cryptoSelections;
+  let expReturn = 0;
+  let variance = 0;
 
-    if (selections.length > 0) {
-      const eachWeight = w / selections.length;
-      selections.forEach(() => {
-        exp += eachWeight * expectedReturns[asset];
-        variance += Math.pow(eachWeight * volatilities[asset], 2);
-      });
-    } else {
-      exp += w * expectedReturns[asset];
-      variance += Math.pow(w * volatilities[asset], 2);
+  /* ----------------------------------------------------------
+       1. Process STOCKS using Alpha Vantage real metrics
+  ---------------------------------------------------------- */
+  if (selectedStocks.length > 0) {
+    const weight = allocations.stocks / 100 / selectedStocks.length;
+
+    for (const sym of selectedStocks) {
+      const quote = await fetchStockQuote(sym);
+      const stats = await fetchHistoricalVolatility(sym);
+
+      // integrate real expected return + real volatility
+      const er = stats.annualReturn * 100;
+      const vol = stats.annualVol * 100;
+
+      expReturn += weight * er;
+      variance += Math.pow(weight * vol, 2);
+
+      // update badge with the FIRST stock chosen only
+      if (sym === selectedStocks[0]) {
+        renderStockBadge(sym, quote, stats);
+      }
     }
-  });
+  } else {
+    // fallback for no stock chosen
+    expReturn += (allocations.stocks / 100) * expectedReturns.stocks;
+    variance += Math.pow((allocations.stocks / 100) * volatilities.stocks, 2);
+  }
+
+  /* ----------------------------------------------------------
+       2. Process CRYPTO (still uses static assumptions)
+  ---------------------------------------------------------- */
+  if (selectedCryptos.length > 0) {
+    const weight = allocations.crypto / 100 / selectedCryptos.length;
+
+    selectedCryptos.forEach(() => {
+      expReturn += weight * expectedReturns.crypto;
+      variance += Math.pow(weight * volatilities.crypto, 2);
+    });
+  } else {
+    expReturn += (allocations.crypto / 100) * expectedReturns.crypto;
+    variance += Math.pow((allocations.crypto / 100) * volatilities.crypto, 2);
+  }
+
+  /* ----------------------------------------------------------
+       3. Process REITS + BONDS (static for now)
+  ---------------------------------------------------------- */
+  expReturn += (allocations.reits / 100) * expectedReturns.reits;
+  variance += Math.pow((allocations.reits / 100) * volatilities.reits, 2);
+
+  expReturn += (allocations.bonds / 100) * expectedReturns.bonds;
+  variance += Math.pow((allocations.bonds / 100) * volatilities.bonds, 2);
+
+  /* ----------------------------------------------------------
+       4. Compute final portfolio metrics
+  ---------------------------------------------------------- */
+  const sigma = Math.sqrt(variance);
+  const rf = 2.5;
+  const sharpe = sigma > 0 ? (expReturn - rf) / sigma : 0;
+
+  const expEl = document.getElementById("expected-return");
+  const volEl = document.getElementById("volatility");
+  const shEl = document.getElementById("sharpe-ratio");
+
+  if (expEl) expEl.textContent = expReturn.toFixed(1) + "%";
+  if (volEl) volEl.textContent = sigma.toFixed(1) + "%";
+  if (shEl) shEl.textContent = sharpe.toFixed(2);
+
+  /* ----------------------------------------------------------
+       5. Update HERO PROJECTION
+  ---------------------------------------------------------- */
+  const heroVal = document.getElementById("hero-equity");
+  if (heroVal && !isNaN(expReturn)) {
+    heroVal.textContent = "$" + (
+      10000 * Math.pow(1 + expReturn / 100, 10)
+    ).toFixed(0);
+  }
+
+  return { expReturn, sigma };
+}
+
 
   const sigma = Math.sqrt(variance);
   const rf = 2.5;
@@ -283,6 +525,130 @@ function buildPortfolioCharts() {
       },
     },
   });
+
+  /* ============================================================
+   MONTE CARLO USING REAL VOLATILITY + REAL EXPECTED RETURN
+   ============================================================ */
+
+function runMonteCarlo(realExpReturn, realVolatility) {
+  const mcCtx = document.getElementById("monte-carlo-chart");
+  if (!mcCtx) return;
+
+  const nYears = 10;
+  const expR = realExpReturn / 100;
+  const sigma = realVolatility / 100;
+
+  const paths = [];
+
+  for (let p = 0; p < 30; p++) {
+    let value = 10000;
+    const path = [value];
+
+    for (let t = 1; t <= nYears; t++) {
+      const shock = sigma * (Math.random() * 2 - 1);
+      value *= 1 + expR + shock;
+      path.push(value);
+    }
+
+    paths.push(path);
+  }
+
+  monteCarloChart = ensureChart(mcCtx, "line", {
+    data: {
+      labels: [...Array(nYears + 1).keys()].map(y => y + "y"),
+      datasets: paths.map(path => ({
+        data: path,
+        tension: 0.25,
+        borderWidth: 1,
+        pointRadius: 0,
+      })),
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: "Monte Carlo (Real Market Volatility)",
+          color: "#e8f5e9",
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
+        y: {
+          ticks: { color: "#b7c9c3" },
+          grid: { color: "#122018" },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+}
+
+  /* ============================================================
+   REAL EXPECTED RETURN → GROWTH CHART
+   ============================================================ */
+
+function buildRealGrowthChart(realExpReturn) {
+  const growthCtx = document.getElementById("growth-chart");
+  if (!growthCtx) return;
+
+  const years = [...Array(11).keys()];
+  const initial = 10000;
+  const r = realExpReturn / 100;
+
+  const series = years.map(y => initial * Math.pow(1 + r, y));
+
+  growthChart = ensureChart(growthCtx, "line", {
+    data: {
+      labels: years.map(y => y + "y"),
+      datasets: [
+        {
+          label: "Projected Value",
+          data: series,
+          tension: 0.25,
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: { labels: { color: "#e8f5e9" } },
+        title: {
+          display: true,
+          text: "Deterministic Growth (Real Expected Return)",
+          color: "#e8f5e9",
+        },
+      },
+      scales: {
+        x: { ticks: { color: "#b7c9c3" }, grid: { color: "#122018" } },
+        y: {
+          ticks: { color: "#b7c9c3" },
+          grid: { color: "#122018" },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+}
+
+  async function handleSimulationRun() {
+  simulationRun = true;
+
+  const { expReturn, sigma } = await calculatePortfolioMetrics();
+
+  // REAL DATA INTEGRATION
+  buildRealGrowthChart(expReturn);
+  runMonteCarlo(expReturn, sigma);
+
+  buildPortfolioCharts(); // keeps allocation, correlation, volatility, scatter updated
+  updateChartVisibilityFromChecks();
+
+  const simStatus = document.getElementById("sim-status");
+  if (simStatus) {
+    simStatus.textContent = "Simulation updated with real market data.";
+    simStatus.classList.add("active");
+  }
+}
+
 
   // Growth
   const growthCtx = document.getElementById("growth-chart");
@@ -907,16 +1273,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const simStatus = document.getElementById("sim-status");
   const runSimBtn = document.getElementById("run-sim-btn");
   if (runSimBtn) {
-    runSimBtn.addEventListener("click", () => {
-      simulationRun = true;
-      calculatePortfolioMetrics();
-      buildPortfolioCharts();
-      updateChartVisibilityFromChecks();
-      if (simStatus) {
-        simStatus.textContent = "Simulation up to date – charts refreshed.";
-        simStatus.classList.add("active");
-      }
-    });
+    runSimBtn.addEventListener("click", async () => {
+    await handleSimulationRun();
+});
+
   }
 
   document
@@ -1008,4 +1368,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 });
+
 
