@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InvestIQ Pro - Portfolio Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="Professional investment simulator with portfolio builder, advanced analytics, and market news."
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 3D background -->
+  <canvas id="bg-canvas"></canvas>
+  <div class="bg-glass-overlay"></div>
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <div class="nav-container">
+      <div class="logo" onclick="showPage('home')">InvestIQ Pro</div>
+      <ul class="nav-links">
+        <li><a href="#home" onclick="showPage('home')">Dashboard</a></li>
+        <li><a href="#portfolio" onclick="showPage('portfolio')">Portfolio</a></li>
+        <li><a href="#news" onclick="showPage('news')">News</a></li>
+        <li><a href="#strategy" onclick="showPage('strategy')">Strategy</a></li>
+        <li><a href="#education" onclick="showPage('education')">Education</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- HOME / DASHBOARD -->
+  <div id="home" class="page active">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="pill">Next-gen Investment Simulator</div>
+          <h1>Professional <span>Portfolio</span> Intelligence</h1>
+          <p>
+            Build, simulate, and stress-test your portfolio with institutional-grade analytics,
+            live market data, and guided insights – all in one interactive experience.
+          </p>
+
+          <div class="hero-metrics">
+            <div class="hero-metric-pill">
+              ▲ Backtested edge
+              <span>+2.1% α</span>
+            </div>
+            <div class="hero-metric-pill">
+              Max drawdown
+              <span>-22.5%</span>
+            </div>
+            <div class="hero-metric-pill">
+              Scenarios
+              <span>1,000+</span>
+            </div>
+          </div>
+
+          <button class="cta-button" onclick="showPage('portfolio')">
+            Run Simulation
+            <span>▶</span>
+          </button>
+        </div>
+
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="hero-card-title">Live Risk Snapshot</div>
+            <div class="hero-equity" id="hero-equity">$137,420</div>
+            <div class="hero-tagline">
+              Model portfolio value if you had invested $10,000 in our default mix 10 years ago.
+            </div>
+            <div class="hero-badges">
+              <div class="risk-badge risk-medium">● Risk: Moderate</div>
+              <div class="risk-badge risk-low">β 0.78 vs S&P</div>
+              <div class="risk-badge risk-high">95% VaR −15.2%</div>
+            </div>
+            <div class="download-row">
+              Dashboard illustration:
+              <a
+                href="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg width='400' height='250' xmlns='http://www.w3.org/2000/svg'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%231a4d2e'/><stop offset='100%' stop-color='%2352b788'/></linearGradient></defs><rect width='400' height='250' fill='url(%23g)'/><polyline points='20,200 80,160 140,180 200,120 260,140 320,80 380,110' fill='none' stroke='%23d4af37' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/></svg>"
+                download="investiq-dashboard.svg"
+              >
+                Download SVG
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="market-stats">
+        <div class="stat-item">
+          <div class="stat-label">Bitcoin Price (USD)</div>
+          <div class="stat-value" id="btc-value">Loading…</div>
+          <div class="stat-change" id="btc-change"></div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Gold Spot (USD)</div>
+          <div class="stat-value" id="gold-value">Loading…</div>
+          <div class="stat-change" id="gold-change"></div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Market Sentiment</div>
+          <div class="stat-value" id="sentiment-value">Neutral</div>
+          <div class="stat-change" id="sentiment-desc">Waiting for data…</div>
+        </div>
+      </div>
+
+      <div class="crypto-ticker glass-card" style="margin-top: 2.2rem">
+        <div id="crypto-ticker" class="ticker-content"></div>
+      </div>
+
+      <div style="margin-top: 2.4rem">
+        <div class="section-header" style="margin-bottom: 1.6rem">
+          <h2 class="section-title">Why <span>InvestIQ Pro</span>?</h2>
+          <p class="section-subtitle">
+            Think of it as a flight simulator for your investments – change allocations,
+            run scenarios, and see how your risk-return profile warps in real time.
+          </p>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Live Integrations</div>
+            <div class="metric-value">5+</div>
+            <div class="metric-subtext">Crypto, metals, indices & macro feeds.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Asset Classes</div>
+            <div class="metric-value">100+</div>
+            <div class="metric-subtext">Equities, REITs, bonds, crypto, & more.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Analytics Modules</div>
+            <div class="metric-value">12</div>
+            <div class="metric-subtext">Correlation, VaR, Monte-Carlo, beta, α, and more.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Simulated Paths</div>
+            <div class="metric-value">1,000</div>
+            <div class="metric-subtext">
+              Monte-Carlo stress tests for upside & drawdown risk.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div id="portfolio" class="page">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Build Your <span>Portfolio</span></h2>
+        <p class="section-subtitle">
+          Set your allocation across major asset classes, then run the simulator to see
+          projected returns, volatility, and risk-adjusted performance.
+        </p>
+      </div>
+
+      <div class="glass-card" style="padding: 1.8rem 1.8rem 1.4rem; margin-bottom: 1.6rem">
+        <div class="graph-controls">
+          <div class="graph-checkboxes">
+            <strong style="font-size: 0.85rem; margin-right: 0.6rem">Show on run:</strong>
+            <label><input type="checkbox" id="chk-allocation" checked />Allocation</label>
+            <label><input type="checkbox" id="chk-growth" checked />Growth</label>
+            <label><input type="checkbox" id="chk-correlation" checked />Correlation</label>
+            <label><input type="checkbox" id="chk-volatility" />Volatility</label>
+            <label><input type="checkbox" id="chk-risk-return" />Risk-return</label>
+            <label><input type="checkbox" id="chk-monte-carlo" />Monte-Carlo</label>
+          </div>
+          <button class="cta-button small" id="run-sim-btn">Run Simulation</button>
+          <div id="sim-status" class="status-badge">
+            Charts hidden – adjust sliders, pick graphs, then click “Run Simulation”.
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 1.7rem 1.7rem 1.2rem">
+        <div class="asset-slider">
+          <div class="slider-header">
+            <div class="asset-name">
+              <div class="asset-icon">📈</div>
+              <div>
+                <div class="asset-label-main">Equities</div>
+                <div class="asset-label-sub">
+                  Large-cap global stocks, diversified across sectors.
+                </div>
+              </div>
+            </div>
+            <div class="asset-value"><span id="stocks-value">40</span>%</div>
+          </div>
+          <input type="range" min="0" max="100" value="40" id="stocks-slider" />
+        </div>
+
+        <div class="asset-slider">
+          <div class="slider-header">
+            <div class="asset-name">
+              <div class="asset-icon">🏢</div>
+              <div>
+                <div class="asset-label-main">Real Estate (REITs)</div>
+                <div class="asset-label-sub">
+                  Listed commercial & residential property trusts.
+                </div>
+              </div>
+            </div>
+            <div class="asset-value"><span id="reits-value">20</span>%</div>
+          </div>
+          <input type="range" min="0" max="100" value="20" id="reits-slider" />
+        </div>
+
+        <div class="asset-slider">
+          <div class="slider-header">
+            <div class="asset-name">
+              <div class="asset-icon">📊</div>
+              <div>
+                <div class="asset-label-main">Fixed Income (Bonds)</div>
+                <div class="asset-label-sub">
+                  Government & investment-grade corporate bonds.
+                </div>
+              </div>
+            </div>
+            <div class="asset-value"><span id="bonds-value">30</span>%</div>
+          </div>
+          <input type="range" min="0" max="100" value="30" id="bonds-slider" />
+        </div>
+
+        <div class="asset-slider" style="margin-bottom: 0.3rem">
+          <div class="slider-header">
+            <div class="asset-name">
+              <div class="asset-icon">₿</div>
+              <div>
+                <div class="asset-label-main">Digital Assets (Crypto)</div>
+                <div class="asset-label-sub">
+                  Bitcoin & large-cap altcoins; high risk, high potential.
+                </div>
+              </div>
+            </div>
+            <div class="asset-value"><span id="crypto-value">10</span>%</div>
+          </div>
+          <input type="range" min="0" max="100" value="10" id="crypto-slider" />
+        </div>
+      </div>
+
+      <!-- Stock & Crypto selectors -->
+      <div class="portfolio-asset-selectors">
+        <div class="glass-card selector-card">
+          <div class="chart-title">Select Stocks</div>
+          <p class="chart-subtitle">
+            Your equity allocation will be distributed equally across these stocks.
+          </p>
+          <select
+            id="stock-select"
+            multiple
+            size="8"
+            class="asset-select"
+          ></select>
+          <p class="chart-subtitle small-note">
+            Hold Ctrl (Windows) or ⌘ (Mac) to select multiple.
+          </p>
+        </div>
+
+        <div class="glass-card selector-card">
+          <div class="chart-title">Select Digital Assets</div>
+          <p class="chart-subtitle">
+            Your crypto allocation will be distributed equally across these assets.
+          </p>
+          <select
+            id="crypto-select"
+            multiple
+            size="8"
+            class="asset-select"
+          ></select>
+          <p class="chart-subtitle small-note">
+            These are top crypto assets by market cap, pulled live from CoinGecko.
+          </p>
+        </div>
+      </div>
+
+      <div class="metrics-grid" style="margin-top: 1.8rem">
+        <div class="metric-card">
+          <div class="metric-label">Total Allocation</div>
+          <div class="metric-value" id="total-allocation">100%</div>
+          <div class="metric-subtext">
+            Keep this at 100% – otherwise your cash drag is included.
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Expected Return (Annual)</div>
+          <div class="metric-value" id="expected-return">8.2%</div>
+          <div class="metric-subtext">
+            Weighted by each asset class’s long-run average.
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Portfolio Volatility</div>
+          <div class="metric-value" id="volatility">12.5%</div>
+          <div class="metric-subtext">
+            Updates instantly as you move the sliders.
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Sharpe Ratio</div>
+          <div class="metric-value" id="sharpe-ratio">0.65</div>
+          <div class="metric-subtext">
+            Risk-adjusted return vs a 2.5% risk-free rate.
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid" style="margin-top: 2.1rem">
+        <div class="chart-card chart-container hidden" id="allocation-card">
+          <div class="chart-title">Asset Allocation Breakdown</div>
+          <div class="chart-subtitle">
+            Doughnut chart of your chosen mix across equities, real estate, bonds, and crypto.
+          </div>
+          <canvas id="allocation-chart" height="220"></canvas>
+        </div>
+
+        <div class="chart-card chart-container hidden" id="growth-card">
+          <div class="chart-title">10-Year Growth Projection ($10,000)</div>
+          <div class="chart-subtitle">
+            Projected value of $10,000 assuming reinvestment and constant allocation.
+          </div>
+          <canvas id="growth-chart" height="220"></canvas>
+        </div>
+
+        <div class="chart-card chart-container hidden" id="correlation-card">
+          <div class="chart-title">Correlation Map</div>
+          <div class="chart-subtitle">
+            Approximate correlations between each asset class.
+          </div>
+          <canvas id="correlation-chart" height="220"></canvas>
+        </div>
+
+        <div class="chart-card chart-container hidden" id="volatility-card">
+          <div class="chart-title">Volatility by Asset</div>
+          <div class="chart-subtitle">
+            Comparing annualised standard deviation for each asset class.
+          </div>
+          <canvas id="volatility-chart" height="220"></canvas>
+        </div>
+
+        <div class="chart-card chart-container hidden" id="risk-return-card">
+          <div class="chart-title">Risk-Return Scatter Plot</div>
+          <div class="chart-subtitle">
+            Each point represents an asset class with expected return vs volatility.
+          </div>
+          <canvas id="risk-return-chart" height="220"></canvas>
+        </div>
+
+        <div class="chart-card chart-container hidden" id="monte-carlo-card">
+          <div class="chart-title">Monte-Carlo Simulation</div>
+          <div class="chart-subtitle">
+            Simulated portfolio paths under random returns – a fan of possible futures.
+          </div>
+          <canvas id="monte-carlo-chart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="asset-cards">
+        <div class="asset-card">
+          <div class="asset-card-header">
+            <div class="asset-card-title">Equities Engine</div>
+            <div class="asset-card-change pos">+8.5% CAGR</div>
+          </div>
+          <div class="asset-card-body">
+            Equities are your growth engine. Use them as the motor of your long-term portfolio,
+            but let other assets smooth the ride.
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-card-header">
+            <div class="asset-card-title">Bond Shock Absorber</div>
+            <div class="asset-card-change">+3.0% yield</div>
+          </div>
+          <div class="asset-card-body">
+            Bonds often cushion equity volatility. They won’t shoot the lights out, but they
+            keep drawdowns survivable.
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-card-header">
+            <div class="asset-card-title">REIT Income Stream</div>
+            <div class="asset-card-change pos">+4.1% yield</div>
+          </div>
+          <div class="asset-card-body">
+            REITs combine rental income with equity-like growth. They can hedge inflation and
+            diversify from pure stocks.
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-card-header">
+            <div class="asset-card-title">Crypto Optionality</div>
+            <div class="asset-card-change neg">High risk</div>
+          </div>
+          <div class="asset-card-body">
+            Crypto adds convex upside at the cost of severe swings. Small allocations preserve
+            upside without wrecking sleep.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEWS -->
+  <div id="news" class="page">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Market <span>News & Headlines</span></h2>
+        <p class="section-subtitle">
+          Curated headlines from global financial outlets. Click any story to jump
+          straight to the original source.
+        </p>
+      </div>
+
+      <div class="glass-card" style="padding: 1.5rem 1.5rem 1.2rem; margin-bottom: 1.4rem">
+        <p style="font-size: 0.9rem; color: var(--gray); margin-bottom: 0.4rem">
+          <strong>How it works</strong> – by default we fetch the latest market headlines
+          via <code>newsapi.org</code>. Plug your own API key into <code>app.js</code>.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--gray-dark)">
+          If an API key isn’t configured or the request fails, we fall back to a small
+          set of sample stories so the layout always looks complete.
+        </p>
+      </div>
+
+      <div id="news-feed" class="news-feed">
+        <div style="text-align: center; padding: 2rem 0">
+          <div class="loader"></div>
+          <div style="margin-top: 0.6rem; font-size: 0.9rem; color: var(--gray)">
+            Loading latest market headlines…
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY -->
+  <div id="strategy" class="page">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Strategy <span>Builder</span></h2>
+        <p class="section-subtitle">
+          Turn your allocation into a long-term plan by choosing your horizon, monthly
+          contributions, and target risk level.
+        </p>
+      </div>
+
+      <div class="two-col">
+        <div class="glass-card" style="padding: 1.6rem 1.7rem">
+          <div class="asset-slider" style="margin-bottom: 1rem">
+            <div class="slider-header">
+              <div class="asset-name">
+                <div class="asset-icon">🎯</div>
+                <div>
+                  <div class="asset-label-main">Time Horizon</div>
+                  <div class="asset-label-sub">
+                    How long until you expect to use this money?
+                  </div>
+                </div>
+              </div>
+              <div class="asset-value">
+                <span id="horizon-value">10</span>y
+              </div>
+            </div>
+            <input type="range" min="1" max="35" value="10" id="horizon-slider" />
+          </div>
+
+          <div class="asset-slider" style="margin-bottom: 1rem">
+            <div class="slider-header">
+              <div class="asset-name">
+                <div class="asset-icon">⚖️</div>
+                <div>
+                  <div class="asset-label-main">Risk Tolerance</div>
+                  <div class="asset-label-sub">
+                    1 = very conservative, 10 = very aggressive.
+                  </div>
+                </div>
+              </div>
+              <div class="asset-value" id="risk-label">Moderate</div>
+            </div>
+            <input type="range" min="1" max="10" value="5" id="risk-slider" />
+          </div>
+
+          <div class="asset-slider" style="margin-bottom: 1rem">
+            <div class="slider-header">
+              <div class="asset-name">
+                <div class="asset-icon">💰</div>
+                <div>
+                  <div class="asset-label-main">Initial Investment</div>
+                  <div class="asset-label-sub">
+                    Your starting lump-sum contribution.
+                  </div>
+                </div>
+              </div>
+              <div class="asset-value">
+                $<span id="initial-value">10,000</span>
+              </div>
+            </div>
+            <input
+              type="range"
+              min="1000"
+              max="1000000"
+              step="1000"
+              value="10000"
+              id="initial-slider"
+            />
+          </div>
+
+          <div class="asset-slider">
+            <div class="slider-header">
+              <div class="asset-name">
+                <div class="asset-icon">📅</div>
+                <div>
+                  <div class="asset-label-main">Monthly Contribution</div>
+                  <div class="asset-label-sub">
+                    How much you plan to invest every month.
+                  </div>
+                </div>
+              </div>
+              <div class="asset-value">
+                $<span id="monthly-value">500</span>
+              </div>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="20000"
+              step="100"
+              value="500"
+              id="monthly-slider"
+            />
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding: 1.6rem 1.7rem">
+          <div class="chart-title" style="margin-bottom: 0.6rem">
+            Strategy Summary
+          </div>
+          <p
+            id="strategy-text"
+            style="font-size: 0.9rem; color: var(--gray); line-height: 1.7"
+          >
+            With a <strong>10-year</strong> horizon, <strong>moderate</strong> risk
+            tolerance, a <strong>$10,000</strong> lump sum, and
+            <strong>$500/mo</strong> contributions, a balanced allocation targeting
+            <strong>8–10% annual returns</strong> can grow meaningfully without
+            relying on extreme risk.
+          </p>
+
+          <div
+            style="
+              margin-top: 1.2rem;
+              padding: 1rem;
+              border-radius: 14px;
+              border: 1px dashed rgba(183, 201, 195, 0.6);
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 1rem;
+              "
+            >
+              <div style="font-size: 0.85rem; color: var(--gray)">
+                Projected portfolio value at the end of your horizon:
+              </div>
+              <div
+                id="strategy-final"
+                style="font-size: 1.7rem; font-weight: 900; color: var(--gold)"
+              >
+                $103,458
+              </div>
+            </div>
+            <div
+              style="
+                margin-top: 0.3rem;
+                font-size: 0.8rem;
+                color: var(--gray-dark);
+              "
+            >
+              Of which <span id="strategy-contrib">$70,000</span> are contributions
+              and <span id="strategy-gain">$33,458</span> are simulated gains.
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem">
+            <canvas id="strategy-chart" height="210"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATION -->
+  <div id="education" class="page">
+
+<!-- INTERACTIVE QUIZ SECTION -->
+<div class="section-header" style="margin-top: 3rem;">
+  <h2 class="section-title">Investment Personality Quiz</h2>
+  <p class="section-subtitle">
+    Answer a few quick questions to discover your risk profile and recommended portfolio style.
+  </p>
+</div>
+
+<div id="quiz-container" class="glass-card" style="padding: 2rem; margin-bottom: 2rem;">
+  
+  <div id="quiz-questions">
+    
+    <!-- Question 1 -->
+    <div class="quiz-question">
+      <h3 class="quiz-title">1. What’s your primary investing goal?</h3>
+      <label><input type="radio" name="q1" value="1"> Preserve wealth with minimal risk</label><br>
+      <label><input type="radio" name="q1" value="2"> Balanced growth and stability</label><br>
+      <label><input type="radio" name="q1" value="3"> Maximize returns over long term</label>
+    </div>
+
+    <!-- Question 2 -->
+    <div class="quiz-question">
+      <h3 class="quiz-title">2. How would you react if your portfolio fell 20% in a month?</h3>
+      <label><input type="radio" name="q2" value="1"> Panic and sell immediately</label><br>
+      <label><input type="radio" name="q2" value="2"> Stay invested and wait for recovery</label><br>
+      <label><input type="radio" name="q2" value="3"> Buy more at lower prices</label>
+    </div>
+
+    <!-- Question 3 -->
+    <div class="quiz-question">
+      <h3 class="quiz-title">3. What investment time horizon do you prefer?</h3>
+      <label><input type="radio" name="q3" value="1"> Less than 3 years</label><br>
+      <label><input type="radio" name="q3" value="2"> 3–10 years</label><br>
+      <label><input type="radio" name="q3" value="3"> 10+ years</label>
+    </div>
+
+    <!-- Question 4 -->
+    <div class="quiz-question">
+      <h3 class="quiz-title">4. How comfortable are you with volatility?</h3>
+      <label><input type="radio" name="q4" value="1"> I dislike any price movement</label><br>
+      <label><input type="radio" name="q4" value="2"> Some volatility is okay</label><br>
+      <label><input type="radio" name="q4" value="3"> I embrace high volatility for higher returns</label>
+    </div>
+
+    <!-- Question 5 -->
+    <div class="quiz-question">
+      <h3 class="quiz-title">5. How much of your income do you invest?</h3>
+      <label><input type="radio" name="q5" value="1"> Less than 10%</label><br>
+      <label><input type="radio" name="q5" value="2"> 10–25%</label><br>
+      <label><input type="radio" name="q5" value="3"> 25% or more</label>
+    </div>
+  </div>
+
+  <button id="quiz-submit" class="cta-button" style="margin-top: 1.5rem;">
+    Submit Quiz
+  </button>
+
+  <div id="quiz-result" style="display:none; margin-top: 2rem;">
+    <h3 class="quiz-result-title" style="color: var(--gold); font-size: 1.5rem; font-weight: 900;"></h3>
+    <p id="quiz-result-text" style="color: var(--gray); font-size: 1rem; line-height: 1.7;"></p>
+  </div>
+
+</div>
+
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Investment <span>Playbook</span></h2>
+        <p class="section-subtitle">
+          Learn what each metric means so the simulator isn’t a black box.
+        </p>
+      </div>
+
+      <div class="compare-grid" style="margin-bottom: 1.8rem">
+        <div class="compare-card">
+          <div class="compare-title">Asset Allocation</div>
+          <p>
+            How you split your money across broad buckets like stocks, bonds, real
+            estate, and alternatives. Research suggests this decision explains most of
+            your long-run performance.
+          </p>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">Volatility</div>
+          <p>
+            The standard deviation of returns – loosely, how “bouncy” your portfolio is.
+            High volatility isn’t bad by itself, but it makes drawdowns more likely.
+          </p>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">Sharpe Ratio</div>
+          <p>
+            Measures return per unit of risk. Two portfolios can have the same return,
+            but the one with lower volatility will have a higher Sharpe.
+          </p>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">Drawdown</div>
+          <p>
+            The peak-to-trough fall in your portfolio. A −50% drawdown needs +100% just
+            to break even – which is why risk control matters.
+          </p>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 1.5rem 1.6rem">
+        <div class="chart-title" style="margin-bottom: 0.5rem">
+          Quick Glossary
+        </div>
+        <ul style="font-size: 0.9rem; color: var(--gray); line-height: 1.7">
+          <li>
+            <strong>Alpha</strong> – excess return above a benchmark (e.g., S&P 500)
+            after adjusting for risk.
+          </li>
+          <li>
+            <strong>Beta</strong> – sensitivity to market moves. A beta of 1 moves with
+            the market; 0.5 moves half as much.
+          </li>
+          <li>
+            <strong>Correlation</strong> – how two assets move together. Low or negative
+            correlation helps diversification.
+          </li>
+          <li>
+            <strong>Value at Risk (VaR)</strong> – a probabilistic “worst case” over a
+            given time horizon at a chosen confidence level.
+          </li>
+          <li>
+            <strong>Dollar-Cost Averaging</strong> – investing the same amount on a
+            regular schedule, regardless of price.
+          </li>
+        </ul>
+      </div>
+    </div>
+<div class="section-header" style="margin-top: 1rem;">
+  <h2 class="section-title">Core Investing Principles</h2>
+  <p class="section-subtitle">
+    These foundational ideas drive all portfolio construction, risk modeling, and long-term
+    wealth building. Understanding them will dramatically improve how you use this simulator.
+  </p>
+</div>
+
+<div class="compare-grid" style="margin-bottom: 2rem;">
+  <div class="compare-card">
+    <div class="compare-title">1. Time in the Market</div>
+    <p>
+      Compounding is the single most powerful force in investing. Even small returns grow
+      exponentially when given enough time. Missing just a few strong market days can reduce
+      long-run gains dramatically.
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-title">2. Diversification</div>
+    <p>
+      No single asset wins every year. A diversified portfolio smooths returns by balancing
+      high-growth assets with stabilizers like bonds, real estate, and alternatives. 
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-title">3. Risk ≠ Volatility</div>
+    <p>
+      Volatility reflects price movement, not true risk. The real risk is permanent loss of
+      capital or failing to meet long-term financial goals.
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-title">4. Market Cycles</div>
+    <p>
+      Markets move in cycles — expansion, peak, contraction, and recovery. Successful investors
+      stay objective and avoid emotional reactions during downturns.
+    </p>
+  </div>
+</div>
+
+<!-- SECTION: ADVANCED CONCEPTS -->
+<div class="section-header">
+  <h2 class="section-title">Advanced Investment Concepts</h2>
+  <p class="section-subtitle">
+    These concepts help explain how professional investors model return, risk, and
+    correlations across asset classes.
+  </p>
+</div>
+
+<div class="glass-card" style="padding: 1.8rem; margin-bottom: 2rem;">
+  <h3 class="chart-title">Modern Portfolio Theory (MPT)</h3>
+  <p style="color: var(--gray); line-height: 1.6;">
+    Developed by Harry Markowitz, MPT shows that a portfolio’s risk is not just the sum of its
+    parts — it depends on how the assets move relative to one another. Combining low-correlation
+    assets creates a more efficient risk/return profile.
+  </p>
+
+  <ul style="margin-top: 1rem; color: var(--gray); line-height: 1.6;">
+    <li><strong>Efficient Frontier:</strong> The set of portfolios with the highest return for a given risk level.</li>
+    <li><strong>Optimal Portfolio:</strong> The point where your risk tolerance intersects the frontier.</li>
+    <li><strong>Correlation:</strong> Lower is better for diversification.</li>
+  </ul>
+</div>
+
+<div class="glass-card" style="padding: 1.8rem; margin-bottom: 2rem;">
+  <h3 class="chart-title">The Role of Bonds in a Portfolio</h3>
+  <p style="color: var(--gray); line-height: 1.6;">
+    Bonds are often seen as “boring,” but they serve as a volatility dampener and income stream.
+    They typically perform well when equities struggle, providing stability during recessions.
+  </p>
+</div>
+
+<div class="glass-card" style="padding: 1.8rem; margin-bottom: 2rem;">
+  <h3 class="chart-title">Why Crypto Is High-Risk, High-Reward</h3>
+  <p style="color: var(--gray); line-height: 1.6;">
+    Digital assets like Bitcoin and Ethereum operate in a rapidly evolving market. They offer 
+    outsized upside, but with rapid drawdowns and regulatory uncertainty. A small allocation 
+    can add meaningful convexity to a portfolio.
+  </p>
+</div>
+
+
+<!-- SECTION: GLOSSARY EXPANDED -->
+<div class="section-header">
+  <h2 class="section-title">Extended Glossary</h2>
+</div>
+
+<div class="glass-card" style="padding: 1.8rem; line-height: 1.7;">
+  <ul style="color: var(--gray);">
+    <li><strong>Compound Interest</strong> – earnings that themselves earn earnings over time.</li>
+    <li><strong>Market Capitalization</strong> – the total value of a company or crypto asset.</li>
+    <li><strong>Liquidity</strong> – how easily an asset can be bought or sold.</li>
+    <li><strong>Volatility Clustering</strong> – periods of high volatility tend to cluster together.</li>
+    <li><strong>Sharpe Ratio</strong> – return per unit of risk.</li>
+    <li><strong>Sortino Ratio</strong> – like Sharpe, but penalizes downside risk only.</li>
+    <li><strong>Maximum Drawdown</strong> – the worst peak-to-trough drop.</li>
+    <li><strong>Risk Parity</strong> – allocating so each asset contributes equal risk.</li>
+    <li><strong>Dollar-Cost Averaging (DCA)</strong> – investing consistently over time.</li>
+    <li><strong>Real Returns</strong> – adjusted for inflation.</li>
+  </ul>
+</div>
+
+<!-- END OF EDUCATION ADDITIONS -->
+
+
+  <footer>
+    <div>
+      <strong>InvestIQ Pro</strong> – educational portfolio simulator, not financial advice.
+    </div>
+    <div style="margin-top: 0.4rem">
+      Live data powered by public APIs (CoinGecko, NewsAPI, and others you plug in).
+    </div>
+  </footer>
+
+  <!-- Libraries + App JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/ r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
