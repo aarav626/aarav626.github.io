@@ -911,3 +911,47 @@ footer strong {
   background: rgba(5, 11, 9, 0.85);
 }
 
+.live-stock-badge {
+  background: rgba(5, 11, 9, 0.9);
+  border: 1px solid rgba(82, 183, 136, 0.5);
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--light);
+  width: fit-content;
+  font-size: 0.85rem;
+}
+
+.stock-badge-header {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.badge-change {
+  font-weight: 600;
+}
+
+.badge-change.positive {
+  color: var(--success);
+}
+
+.badge-change.negative {
+  color: var(--danger);
+}
+
+.stock-badge-metrics {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.hidden {
+  display: none;
+}
+
+
