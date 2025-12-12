@@ -108,6 +108,78 @@ async function fetchHistoricalVolatility(symbol) {
   }
 }
 
+/* ============================================================
+   COINGECKO CRYPTO HISTORICAL DATA ENGINE
+   ============================================================ */
+
+const cryptoCache = {
+  history: {},
+  timestamp: {}
+};
+
+/* ------------------------------------------------------------
+   Fetch crypto historical data from CoinGecko
+   Gets 90 days of price data and calculates:
+     - daily returns
+     - annualized volatility
+     - expected annual return
+------------------------------------------------------------ */
+async function fetchCryptoHistoricalData(coinId) {
+  const now = Date.now();
+
+  // Cache valid for 10 minutes
+  if (cryptoCache.history[coinId] && now - cryptoCache.timestamp[coinId] < 600000) {
+    return cryptoCache.history[coinId];
+  }
+
+  try {
+    // Fetch 90 days of historical prices
+    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=90&interval=daily`;
+    const res = await fetch(url);
+    
+    if (!res.ok) throw new Error("CoinGecko HTTP " + res.status);
+    
+    const data = await res.json();
+    
+    if (!data.prices || data.prices.length < 2) {
+      throw new Error("Insufficient price data");
+    }
+
+    // Extract closing prices
+    const prices = data.prices.map(p => p[1]);
+
+    // Calculate log returns
+    const logReturns = [];
+    for (let i = 1; i < prices.length; i++) {
+      logReturns.push(Math.log(prices[i] / prices[i - 1]));
+    }
+
+    const n = logReturns.length;
+    const mean = logReturns.reduce((a, b) => a + b, 0) / n;
+    const variance = logReturns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+
+    const dailyVol = Math.sqrt(variance);
+    const annualVol = dailyVol * Math.sqrt(365); // Crypto trades 365 days
+    const annualReturn = Math.pow(1 + mean, 365) - 1;
+
+    const stats = {
+      annualVol,
+      annualReturn,
+      dailyVol,
+      meanDailyReturn: mean
+    };
+
+    cryptoCache.history[coinId] = stats;
+    cryptoCache.timestamp[coinId] = now;
+
+    return stats;
+  } catch (err) {
+    console.warn(`Crypto historical data error for ${coinId}:`, err);
+    // Fallback to reasonable crypto estimates
+    return { annualVol: 0.75, annualReturn: 0.45 };
+  }
+}
+
 // GLOBAL PAGE NAV
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -397,22 +469,27 @@ async function calculatePortfolioMetrics() {
   }
 
   /* ----------------------------------------------------------
-       2. Process CRYPTO (still uses static assumptions)
+       2. Process CRYPTO using CoinGecko real historical data
   ---------------------------------------------------------- */
   if (selectedCryptos.length > 0) {
     const weight = allocations.crypto / 100 / selectedCryptos.length;
 
-    selectedCryptos.forEach(() => {
-      expReturn += weight * expectedReturns.crypto;
-      variance += Math.pow(weight * volatilities.crypto, 2);
-    });
+    for (const coinId of selectedCryptos) {
+      const stats = await fetchCryptoHistoricalData(coinId);
+
+      const er = stats.annualReturn * 100;
+      const vol = stats.annualVol * 100;
+
+      expReturn += weight * er;
+      variance += Math.pow(weight * vol, 2);
+    }
   } else {
     expReturn += (allocations.crypto / 100) * expectedReturns.crypto;
     variance += Math.pow((allocations.crypto / 100) * volatilities.crypto, 2);
   }
 
   /* ----------------------------------------------------------
-       3. Process REITS + BONDS (static for now)
+       3. Process REITS + BONDS (static for now - could add ETF data)
   ---------------------------------------------------------- */
   expReturn += (allocations.reits / 100) * expectedReturns.reits;
   variance += Math.pow((allocations.reits / 100) * volatilities.reits, 2);
