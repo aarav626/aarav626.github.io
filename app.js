@@ -721,438 +721,79 @@ async function buildCryptoTicker() {
   }
 }
 
-// ============ UPGRADED NEWS SECTION ============
+// -------- MINIMAL + LIVE NEWS MODULE --------
 
-// Use your existing key here:
-const NEWS_API_KEY = "6fac2527aad64481bf4934d1ba1bfbf2";
-
-const newsState = {
-  category: "top",
-  query: "",
-  page: 1,
-  pageSize: 6,
-  loading: false,
-  reachedEnd: false,
-  lastBatch: [],
-};
-
-const NEWS_STORAGE_KEY = "investiq_saved_news";
-
-function sentimentFromText(text = "") {
-  const t = text.toLowerCase();
-  let score = 0;
-  const bullishWords = ["rally", "surge", "gain", "record high", "optimism", "beat", "growth", "bull"];
-  const bearishWords = ["selloff", "plunge", "drop", "loss", "recession", "fear", "cut", "bear"];
-
-  bullishWords.forEach((w) => {
-    if (t.includes(w)) score += 1;
-  });
-  bearishWords.forEach((w) => {
-    if (t.includes(w)) score -= 1;
-  });
-
-  if (score > 0) return { label: "Bullish", className: "sentiment-bullish" };
-  if (score < 0) return { label: "Bearish", className: "sentiment-bearish" };
-  return { label: "Neutral", className: "sentiment-neutral" };
-}
-
-function highlightKeywords(title = "") {
-  const keywords = ["fed", "inflation", "rate", "rates", "gold", "bitcoin", "earnings", "recession", "ai"];
-  let result = title;
-  keywords.forEach((kw) => {
-    const re = new RegExp(`(${kw})`, "ig");
-    result = result.replace(re, `<mark style="background:none;color:var(--accent);">${"$1"}</mark>`);
-  });
-  return result;
-}
-
-function summarizeArticle(article) {
-  const text = article.description || article.content || article.title || "";
-  if (text.length <= 220) return text;
-  const cutoff = text.indexOf(".", 140);
-  if (cutoff !== -1 && cutoff < 260) return text.slice(0, cutoff + 1);
-  return text.slice(0, 220) + "…";
-}
-
-function buildNewsUrl() {
-  const { category, query, page, pageSize } = newsState;
-  const baseEverything = "https://newsapi.org/v2/everything";
-  const baseTop = "https://newsapi.org/v2/top-headlines";
-
-  // Search overrides category (use /everything for better results)
-  if (query && query.trim()) {
-    const q = encodeURIComponent(query.trim());
-    return `${baseEverything}?q=${q}&language=en&sortBy=publishedAt&pageSize=${pageSize}&page=${page}&apiKey=${NEWS_API_KEY}`;
-  }
-
-  // Category logic
-  if (category === "top") {
-    return `${baseTop}?category=business&language=en&pageSize=${pageSize}&page=${page}&apiKey=${NEWS_API_KEY}`;
-  }
-
-  let q = "";
-  switch (category) {
-    case "stocks":
-      q = "stocks OR equity OR earnings OR \"stock market\"";
-      break;
-    case "crypto":
-      q = "bitcoin OR crypto OR ethereum OR blockchain";
-      break;
-    case "macro":
-      q = "inflation OR GDP OR recession OR \"central bank\" OR macroeconomic";
-      break;
-    case "fx":
-      q = "forex OR FX OR currency OR \"exchange rate\"";
-      break;
-    case "commodities":
-      q = "gold OR oil OR copper OR commodity OR commodities";
-      break;
-    default:
-      q = "markets OR finance";
-  }
-  q = encodeURIComponent(q);
-  return `${baseEverything}?q=${q}&language=en&sortBy=publishedAt&pageSize=${pageSize}&page=${page}&apiKey=${NEWS_API_KEY}`;
-}
-
-async function fetchNewsPage() {
-  const url = buildNewsUrl();
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("News HTTP " + res.status);
-    const json = await res.json();
-    return json.articles || [];
-  } catch (err) {
-    console.warn("News API error:", err);
-    return [];
-  }
-}
-
-function renderBreakingTicker(articles) {
-  const ticker = document.getElementById("breaking-news-ticker");
-  if (!ticker) return;
-  if (!articles.length) {
-    ticker.textContent = "";
-    return;
-  }
-  const top = articles.slice(0, 5);
-  const inner = document.createElement("div");
-  inner.className = "breaking-inner";
-
-  const label = document.createElement("span");
-  label.className = "breaking-label";
-  label.textContent = "Breaking";
-  inner.appendChild(label);
-
-  top.forEach((a) => {
-    const span = document.createElement("span");
-    span.className = "breaking-headline";
-    span.textContent = a.title;
-    inner.appendChild(span);
-  });
-
-  ticker.innerHTML = "";
-  ticker.appendChild(inner);
-}
-
-/* ---------- Watchlist (localStorage) ---------- */
-
-function getSavedArticles() {
-  try {
-    const raw = localStorage.getItem(NEWS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function setSavedArticles(arr) {
-  localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(arr));
-}
-
-function isSaved(url) {
-  return getSavedArticles().some((a) => a.url === url);
-}
-
-function toggleSaved(article) {
-  const current = getSavedArticles();
-  const idx = current.findIndex((a) => a.url === article.url);
-  if (idx === -1) {
-    current.push({
-      title: article.title,
-      url: article.url,
-      source: article.source?.name || "",
-      publishedAt: article.publishedAt,
-    });
-  } else {
-    current.splice(idx, 1);
-  }
-  setSavedArticles(current);
-  renderSavedArticles();
-}
-
-function renderSavedArticles() {
-  const container = document.getElementById("saved-news");
-  if (!container) return;
-  const saved = getSavedArticles();
-  container.innerHTML = "";
-
-  if (!saved.length) {
-    container.innerHTML = `<p style="font-size:0.8rem;color:var(--gray-dark);">No saved articles yet. Click ★ on a headline to save it.</p>`;
-    return;
-  }
-
-  saved.forEach((a) => {
-    const div = document.createElement("div");
-    div.className = "saved-news-item";
-    div.innerHTML = `
-      <div class="saved-news-item-title">${a.title}</div>
-      <div class="saved-news-item-meta">${a.source || "Source"} • ${
-      a.publishedAt ? new Date(a.publishedAt).toLocaleString() : ""
-    }</div>
-    `;
-    div.addEventListener("click", () => {
-      window.open(a.url, "_blank", "noopener");
-    });
-    container.appendChild(div);
-  });
-}
-
-/* ---------- Modal + TTS ---------- */
-
-let currentModalArticle = null;
-
-function openNewsModal(article) {
-  currentModalArticle = article;
-
-  const modal = document.getElementById("news-modal");
-  if (!modal) return;
-
-  const img = document.getElementById("news-modal-image");
-  const srcEl = document.getElementById("news-modal-source");
-  const dateEl = document.getElementById("news-modal-date");
-  const sentEl = document.getElementById("news-modal-sentiment");
-  const titleEl = document.getElementById("news-modal-title");
-  const summaryEl = document.getElementById("news-modal-summary");
-  const linkEl = document.getElementById("news-modal-link");
-
-  const placeholder =
-    "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=800&q=80";
-
-  if (img) img.src = article.urlToImage || placeholder;
-  if (srcEl) srcEl.textContent = article.source?.name || "Unknown source";
-  if (dateEl)
-    dateEl.textContent = article.publishedAt
-      ? new Date(article.publishedAt).toLocaleString()
-      : "";
-  const sentiment = sentimentFromText(article.title + " " + (article.description || ""));
-  if (sentEl) {
-    sentEl.textContent = sentiment.label;
-    sentEl.className = `sentiment-pill ${sentiment.className}`;
-  }
-  if (titleEl) titleEl.textContent = article.title || "";
-  const summary = summarizeArticle(article);
-  if (summaryEl) summaryEl.textContent = summary;
-  if (linkEl) linkEl.href = article.url;
-
-  modal.classList.remove("hidden");
-}
-
-function closeNewsModal() {
-  const modal = document.getElementById("news-modal");
-  if (modal) modal.classList.add("hidden");
-  currentModalArticle = null;
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
-  }
-}
-
-/* ---------- Render feed ---------- */
-
-function renderArticles(articles, append = false) {
+async function buildNewsFeed(query = "") {
   const container = document.getElementById("news-feed");
   if (!container) return;
 
-  if (!append) container.innerHTML = "";
+  const API_KEY = "6fac2527aad64481bf4934d1ba1bfbf2";
+
+  let url = "";
+  if (!query) {
+    url = `https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=12&apiKey=${API_KEY}`;
+  } else {
+    const q = encodeURIComponent(query);
+    url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=12&apiKey=${API_KEY}`;
+  }
+
+  let articles = [];
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    articles = json.articles || [];
+  } catch (e) {
+    console.warn("News fetch error:", e);
+  }
+
+  container.innerHTML = "";
 
   const placeholder =
     "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=800&q=80";
 
   articles.forEach((a) => {
+    const sentiment = getSentiment(a.title + " " + (a.description || ""));
+
     const card = document.createElement("article");
     card.className = "news-item";
 
-    const sentiment = sentimentFromText(a.title + " " + (a.description || ""));
-    const summary = summarizeArticle(a);
-    const saved = isSaved(a.url);
-
     card.innerHTML = `
-      <div class="news-card-link">
-        <img class="news-image" src="${a.urlToImage || placeholder}" alt="${a.title || "News"}">
-        <div class="news-body">
-          <h3 class="news-title">${highlightKeywords(a.title || "")}</h3>
-          <p class="news-desc">${summary}</p>
-          <div class="news-meta">
-            <span>${a.source?.name || "Unknown source"}</span>
-            <span>${a.publishedAt ? new Date(a.publishedAt).toLocaleString() : ""}</span>
-          </div>
-          <div class="news-actions">
-            <span class="sentiment-pill ${sentiment.className}">${sentiment.label}</span>
-            <div>
-              <button class="news-save-btn ${saved ? "saved" : ""}" title="Save article">★</button>
-              <button class="news-open-btn">Open ↗</button>
-            </div>
-          </div>
+      <img class="news-image" src="${a.urlToImage || placeholder}" alt="">
+      <div class="news-body">
+        <h3 class="news-title">${a.title || ""}</h3>
+        <p class="news-desc">${a.description || ""}</p>
+        <div class="news-meta">
+          ${(a.source?.name || "")} • ${
+      a.publishedAt ? new Date(a.publishedAt).toLocaleString() : ""
+    }
         </div>
+        <span class="sentiment-pill ${sentiment.class}">${sentiment.label}</span>
       </div>
     `;
 
-    // Open modal on card click
-    card.addEventListener("click", (e) => {
-      // avoid double-handling when buttons clicked
-      if (e.target.closest("button")) return;
-      openNewsModal(a);
+    // clicking opens article correctly
+    card.addEventListener("click", () => {
+      if (a.url) window.open(a.url, "_blank", "noopener");
     });
-
-    // Save toggle
-    const saveBtn = card.querySelector(".news-save-btn");
-    if (saveBtn) {
-      saveBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleSaved(a);
-        saveBtn.classList.toggle("saved");
-      });
-    }
-
-    // Open in new tab
-    const openBtn = card.querySelector(".news-open-btn");
-    if (openBtn) {
-      openBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (a.url) window.open(a.url, "_blank", "noopener");
-      });
-    }
 
     container.appendChild(card);
   });
 }
 
-/* ---------- Load news with pagination & live updates ---------- */
+// Simple sentiment calculation
+function getSentiment(text) {
+  const t = text.toLowerCase();
+  const bull = ["rally", "gain", "rise", "optimism", "record", "beat"];
+  const bear = ["drop", "fall", "fear", "loss", "cut", "plunge"];
 
-async function loadNews({ reset = false } = {}) {
-  if (newsState.loading) return;
-  newsState.loading = true;
+  let score = 0;
+  bull.forEach((w) => t.includes(w) && score++);
+  bear.forEach((w) => t.includes(w) && score--);
 
-  if (reset) {
-    newsState.page = 1;
-    newsState.reachedEnd = false;
-  }
-
-  const articles = await fetchNewsPage();
-  newsState.loading = false;
-
-  if (!articles.length) {
-    if (newsState.page === 1) {
-      const container = document.getElementById("news-feed");
-      if (container) container.innerHTML = "<p>Unable to load live news right now.</p>";
-    }
-    newsState.reachedEnd = true;
-    return;
-  }
-
-  newsState.lastBatch = articles;
-
-  const append = !reset && newsState.page > 1;
-  renderArticles(articles, append);
-
-  if (newsState.page === 1) {
-    renderBreakingTicker(articles);
-  }
-
-  if (articles.length < newsState.pageSize) {
-    newsState.reachedEnd = true;
-  }
+  if (score > 0) return { label: "Bullish", class: "sentiment-bullish" };
+  if (score < 0) return { label: "Bearish", class: "sentiment-bearish" };
+  return { label: "Neutral", class: "sentiment-neutral" };
 }
-
-/* ---------- Init News UI ---------- */
-
-function initNewsSection() {
-  const tabs = document.querySelectorAll(".news-tab");
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
-      newsState.category = tab.getAttribute("data-news-category") || "top";
-      newsState.query = "";
-      const input = document.getElementById("news-search-input");
-      if (input) input.value = "";
-      loadNews({ reset: true });
-    });
-  });
-
-  const searchInput = document.getElementById("news-search-input");
-  const searchBtn = document.getElementById("news-search-btn");
-  if (searchBtn && searchInput) {
-    searchBtn.addEventListener("click", () => {
-      newsState.query = searchInput.value.trim();
-      newsState.page = 1;
-      newsState.reachedEnd = false;
-      loadNews({ reset: true });
-    });
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        newsState.query = searchInput.value.trim();
-        newsState.page = 1;
-        newsState.reachedEnd = false;
-        loadNews({ reset: true });
-      }
-    });
-  }
-
-  // Infinite scroll
-  window.addEventListener("scroll", () => {
-    const newsPage = document.getElementById("news");
-    if (!newsPage || !newsPage.classList.contains("active")) return;
-    if (newsState.loading || newsState.reachedEnd) return;
-
-    const nearBottom =
-      window.innerHeight + window.scrollY > document.body.offsetHeight - 400;
-    if (nearBottom) {
-      newsState.page += 1;
-      loadNews({ reset: false });
-    }
-  });
-
-  // Modal controls
-  const modal = document.getElementById("news-modal");
-  const closeBtn = document.getElementById("news-modal-close");
-  const backdrop = document.querySelector(".news-modal-backdrop");
-  if (closeBtn) closeBtn.addEventListener("click", closeNewsModal);
-  if (backdrop) backdrop.addEventListener("click", closeNewsModal);
-
-  const ttsBtn = document.getElementById("news-modal-tts");
-  if (ttsBtn && "speechSynthesis" in window) {
-    ttsBtn.addEventListener("click", () => {
-      if (!currentModalArticle) return;
-      const summary = summarizeArticle(currentModalArticle);
-      const utter = new SpeechSynthesisUtterance(summary);
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
-    });
-  }
-
-  renderSavedArticles();
-  loadNews({ reset: true });
-
-  // Optional: periodically refresh top headlines ticker & first page (only when on Top & no search)
-  setInterval(() => {
-    if (newsState.category === "top" && !newsState.query) {
-      newsState.page = 1;
-      newsState.reachedEnd = false;
-      loadNews({ reset: true });
-    }
-  }, 120000); // every 2 minutes
-}
-
 
 // STOCK & CRYPTO SELECT POPULATION
 function populateStockSelect() {
@@ -1328,4 +969,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 });
+
 
