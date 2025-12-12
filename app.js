@@ -722,6 +722,22 @@ async function buildCryptoTicker() {
 }
 
 // NEWS (NewsAPI + fallback)
+
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1542228262-3d663b306a53?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1518544887878-602d53a55eeb?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1556742031-c6961e8560b0?auto=format&fit=crop&w=800&q=80"
+];
+
+// Returns a random fallback image
+function getRandomFallbackImage() {
+  return FALLBACK_IMAGES[Math.floor(Math.random() * FALLBACK_IMAGES.length)];
+}
+
 async function buildNewsFeed() {
   const container = document.getElementById("news-feed");
   if (!container) return;
@@ -787,7 +803,10 @@ async function buildNewsFeed() {
 
     const img = document.createElement("img");
     img.className = "news-image";
-    img.src = a.urlToImage || placeholder;
+    img.src = a.urlToImage && !a.urlToImage.includes("example")
+  ? a.urlToImage
+  : getRandomFallbackImage();
+
     img.alt = a.title || "Market news";
 
     const body = document.createElement("div");
@@ -989,3 +1008,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 });
+
