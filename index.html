@@ -394,30 +394,81 @@
       </div>
     </div>
   </div>
+<!-- NEWS PAGE -->
+<div id="news" class="page">
+  <div class="container">
 
-  <!-- NEWS -->
-  <div id="news" class="page">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">Market <span>News & Headlines</span></h2>
-        <p class="section-subtitle">
-          Curated headlines from global financial outlets. Click any story to jump
-          straight to the original source.
-        </p>
+    <div class="section-header">
+      <h2 class="section-title">Market <span>News</span></h2>
+      <p class="section-subtitle">Live, filterable headlines from global markets.</p>
+    </div>
+
+    <!-- Filters + Search -->
+    <div class="news-top-bar">
+      <div class="news-tabs">
+        <button class="news-tab active" data-news-category="top">Top</button>
+        <button class="news-tab" data-news-category="stocks">Stocks</button>
+        <button class="news-tab" data-news-category="crypto">Crypto</button>
+        <button class="news-tab" data-news-category="macro">Macro</button>
+        <button class="news-tab" data-news-category="fx">FX</button>
+        <button class="news-tab" data-news-category="commodities">Commodities</button>
       </div>
+      <div class="news-search">
+        <input
+          id="news-search-input"
+          type="text"
+          placeholder="Search headlines (e.g. Tesla, inflation, BTC ETF)"
+        />
+        <button id="news-search-btn">Search</button>
+      </div>
+    </div>
 
-  
+    <!-- Breaking ticker -->
+    <div id="breaking-news-ticker" class="breaking-ticker"></div>
 
-      <div id="news-feed" class="news-feed">
-        <div style="text-align: center; padding: 2rem 0">
-          <div class="loader"></div>
-          <div style="margin-top: 0.6rem; font-size: 0.9rem; color: var(--gray)">
-            Loading latest market headlines…
-          </div>
-        </div>
+    <!-- Main layout: feed + watchlist -->
+    <div class="news-layout">
+      <div id="news-feed" class="news-grid"></div>
+
+      <aside class="news-sidebar">
+        <h3 class="news-sidebar-title">Saved Articles</h3>
+        <div id="saved-news"></div>
+      </aside>
+    </div>
+
+  </div>
+</div>
+
+<!-- NEWS MODAL -->
+<div id="news-modal" class="news-modal hidden">
+  <div class="news-modal-backdrop"></div>
+  <div class="news-modal-content">
+    <button id="news-modal-close" class="news-modal-close">×</button>
+    <img id="news-modal-image" class="news-modal-image" alt="" />
+    <div class="news-modal-body">
+      <div class="news-modal-meta">
+        <span id="news-modal-source"></span>
+        <span id="news-modal-date"></span>
+        <span id="news-modal-sentiment" class="sentiment-pill"></span>
+      </div>
+      <h3 id="news-modal-title"></h3>
+      <p id="news-modal-summary"></p>
+      <div class="news-modal-actions">
+        <button id="news-modal-tts" class="cta-button small">🔊 Read aloud</button>
+        <a
+          id="news-modal-link"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="cta-button small"
+        >
+          Open full article ↗
+        </a>
       </div>
     </div>
   </div>
+</div>
+
 
   <!-- STRATEGY -->
   <div id="strategy" class="page">
@@ -836,5 +887,6 @@
   <script src="app.js"></script>
 </body>
 </html>
+
 
 
